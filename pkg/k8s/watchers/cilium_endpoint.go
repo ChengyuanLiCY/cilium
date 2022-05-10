@@ -7,6 +7,7 @@ import (
 	"net"
 	"sync"
 
+	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/cilium/cilium/pkg/identity"
@@ -18,6 +19,7 @@ import (
 	"github.com/cilium/cilium/pkg/k8s/utils"
 	"github.com/cilium/cilium/pkg/k8s/watchers/resources"
 	"github.com/cilium/cilium/pkg/kvstore"
+	"github.com/cilium/cilium/pkg/logging/logfields"
 	"github.com/cilium/cilium/pkg/node"
 	"github.com/cilium/cilium/pkg/option"
 	"github.com/cilium/cilium/pkg/policy"
@@ -166,6 +168,21 @@ func (k *K8sWatcher) endpointUpdated(oldEndpoint, endpoint *types.CiliumEndpoint
 		return
 	}
 
+	if option.Config.EnableHighScaleIPcache &&
+		nodeIP.String() != node.GetIPv4().String() &&
+		nodeIP.String() != node.GetIPv6().String() &&
+		!identity.IsWellKnownIdentity(id) {
+		// Well-known identities are kept in the high-scale ipcache because we
+		// need to be able to connect to the DNS pods to resolve FQDN policies.
+		scopedLog := log.WithFields(logrus.Fields{
+			logfields.Identity: id,
+			logfields.IPv4:     endpoint.Networking.Addressing[0].IPV4,
+			logfields.IPv6:     endpoint.Networking.Addressing[0].IPV6,
+		})
+		scopedLog.Debug("Endpoint is not local; skipping ipcache upsert")
+		return
+	}
+
 	k8sMeta := &ipcache.K8sMetadata{
 		Namespace:  endpoint.Namespace,
 		PodName:    endpoint.Name,
@@ -202,6 +219,7 @@ func (k *K8sWatcher) endpointUpdated(oldEndpoint, endpoint *types.CiliumEndpoint
 		}
 	}
 
+	// TODO Move up.
 	if option.Config.EnableIPv4EgressGateway {
 		k.egressGatewayManager.OnUpdateEndpoint(endpoint)
 	}

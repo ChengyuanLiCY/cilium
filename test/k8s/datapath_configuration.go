@@ -749,6 +749,23 @@ var _ = Describe("K8sDatapathConfig", func() {
 		})
 	})
 
+	It("High-scale IPcache", func() {
+		options := map[string]string{
+			"highScaleIPcache.enabled":    "true",
+			"tunnel":                      "disabled",
+			"bpf.monitorAggregation":      "none",
+			"devices":                     "",
+			"kubeProxyReplacement":        "disabled",
+			"ipv6.enabled":                "false",
+			"wellKnownIdentities.enabled": "true",
+		}
+		if !helpers.RunsOnGKE() {
+			options["autoDirectNodeRoutes"] = "true"
+		}
+		deploymentManager.DeployCilium(options, DeployCiliumOptionsAndDNS)
+		helpers.HoldEnvironment("Let's test")
+	})
+
 	Context("Iptables", func() {
 		SkipItIf(func() bool {
 			return helpers.IsIntegration(helpers.CIIntegrationGKE) || helpers.DoesNotRunWithKubeProxyReplacement()

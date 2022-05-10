@@ -89,6 +89,8 @@ chown -R vagrant:vagrant /home/vagrant 2>/dev/null || true
 curl -SsL https://github.com/cilium/bpf-map/releases/download/v1.0/bpf-map -o bpf-map
 chmod +x bpf-map
 mv bpf-map /usr/bin
+
+git config --global --add safe.directory /home/vagrant/go/src/github.com/cilium/cilium
 SCRIPT
 
 $makeclean = ENV['MAKECLEAN'] ? "export MAKECLEAN=1" : ""

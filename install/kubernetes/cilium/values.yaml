@@ -241,6 +241,13 @@ bandwidthManager:
   # -- Activate BBR TCP congestion control for Pods
   bbr: false
 
+# -- EnableHighScaleIPcache enables the special ipcache mode for high scale
+# clusters. The ipcache content will be reduced to the strict minimum and
+# traffic will be encapsulated to carry security identities.
+highScaleIPcache:
+  # -- Enable the high scale mode for the ipcache.
+  enabled: false
+
 # -- Configure BGP
 bgp:
   # -- Enable BGP support inside Cilium; embeds a new ConfigMap for BGP inside

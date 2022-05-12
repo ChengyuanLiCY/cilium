@@ -575,6 +575,11 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
 
 	if option.Config.EnableHighScaleIPcache {
 		cDefinesMap["ENABLE_HIGH_SCALE_IPCACHE"] = "1"
+		cidr := option.Config.IPv4NativeRoutingCIDR
+		cDefinesMap["IPV4_NATIVE_ROUTING_CIDR"] =
+			fmt.Sprintf("%#x", byteorder.NetIPv4ToHost32(cidr.IP))
+		ones, _ := cidr.Mask.Size()
+		cDefinesMap["IPV4_NATIVE_ROUTING_CIDR_LEN"] = fmt.Sprintf("%d", ones)
 	}
 
 	if option.Config.EnableCustomCalls {

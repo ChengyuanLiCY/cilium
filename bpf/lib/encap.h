@@ -185,21 +185,36 @@ encap_and_redirect_with_nodeid(struct __ctx_buff *ctx, __u32 tunnel_endpoint,
  */
 static __always_inline int
 encap_and_redirect_lxc(struct __ctx_buff *ctx, __u32 tunnel_endpoint,
+		       __u32 dst_ip __maybe_unused,
 		       __u8 encrypt_key __maybe_unused,
-		       struct endpoint_key *key, __u32 seclabel,
+		       struct endpoint_key *key __maybe_unused, __u32 seclabel,
 		       __u32 dstid, const struct trace_ctx *trace)
 {
 	__u32 ifindex __maybe_unused;
-	struct endpoint_key *tunnel;
+	struct endpoint_key *tunnel __maybe_unused;
 	int ret __maybe_unused;
 
+#ifdef ENABLE_HIGH_SCALE_IPCACHE
+	/* If the destination was not found in the ipcache (no tunnel endpoint)
+	 * and it is part of the native routing CIDR, then it's assumed to be a
+	 * remote pod. In that case, since the high-scale ipcache is enabled,
+	 * we want to encapsulate with the remote pod's IP itself.
+	 */
+	if (!tunnel_endpoint && ipv4_is_in_subnet(dst_ip,
+						  IPV4_NATIVE_ROUTING_CIDR,
+						  IPV4_NATIVE_ROUTING_CIDR_LEN))
+		return __encap_and_redirect_with_nodeid(ctx, dst_ip, seclabel,
+							dstid, NOT_VTEP_DST,
+							trace);
+	return DROP_NO_TUNNEL_ENDPOINT;
+#else /* ENABLE_HIGH_SCALE_IPCACHE */
 	if (tunnel_endpoint) {
-#ifdef ENABLE_IPSEC
+# ifdef ENABLE_IPSEC
 		if (encrypt_key)
 			return encap_and_redirect_ipsec(ctx, tunnel_endpoint,
 							encrypt_key, seclabel);
-#endif
-#if !defined(ENABLE_NODEPORT) && (defined(ENABLE_IPSEC) || defined(ENABLE_HOST_FIREWALL))
+# endif
+# if !defined(ENABLE_NODEPORT) && (defined(ENABLE_IPSEC) || defined(ENABLE_HOST_FIREWALL))
 		/* For IPSec and the host firewall, traffic from a pod to a remote node
 		 * is sent through the tunnel. In the case of node --> VIP@remote pod,
 		 * packets may be DNATed when they enter the remote node. If kube-proxy
@@ -214,17 +229,18 @@ encap_and_redirect_lxc(struct __ctx_buff *ctx, __u32 tunnel_endpoint,
 
 		/* tell caller that this packet needs to go through the stack: */
 		return CTX_ACT_OK;
-#else
+# else
 		return __encap_and_redirect_with_nodeid(ctx, tunnel_endpoint,
 							seclabel, dstid, NOT_VTEP_DST, trace);
-#endif /* !ENABLE_NODEPORT && (ENABLE_IPSEC || ENABLE_HOST_FIREWALL) */
+# endif /* !ENABLE_NODEPORT && (ENABLE_IPSEC || ENABLE_HOST_FIREWALL) */
 	}
+
 
 	tunnel = map_lookup_elem(&TUNNEL_MAP, key);
 	if (!tunnel)
 		return DROP_NO_TUNNEL_ENDPOINT;
 
-#ifdef ENABLE_IPSEC
+# ifdef ENABLE_IPSEC
 	if (tunnel->key) {
 		__u8 min_encrypt_key = get_min_encrypt_key(tunnel->key);
 
@@ -232,9 +248,10 @@ encap_and_redirect_lxc(struct __ctx_buff *ctx, __u32 tunnel_endpoint,
 						min_encrypt_key,
 						seclabel);
 	}
-#endif
+# endif
 	return __encap_and_redirect_with_nodeid(ctx, tunnel->ip4, seclabel,
 						dstid, NOT_VTEP_DST, trace);
+#endif /* ENABLE_HIGH_SCALE_IPCACHE */
 }
 
 static __always_inline int

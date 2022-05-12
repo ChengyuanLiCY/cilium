@@ -513,8 +513,9 @@ ct_recreate6:
 		 * the packet needs IPSec encap so push ctx to stack for encap, or
 		 * (c) packet was redirected to tunnel device so return.
 		 */
-		ret = encap_and_redirect_lxc(ctx, tunnel_endpoint, encrypt_key,
-					     &key, SECLABEL, *dst_id, &trace);
+		ret = encap_and_redirect_lxc(ctx, tunnel_endpoint, 0,
+					     encrypt_key, &key, SECLABEL,
+					     *dst_id, &trace);
 		if (ret == CTX_ACT_OK)
 			goto encrypt_to_stack;
 		else if (ret != DROP_NO_TUNNEL_ENDPOINT)
@@ -1046,8 +1047,9 @@ ct_recreate4:
 		/* Otherwise encap and redirect the packet to egress gateway
 		 * node through a tunnel.
 		 */
-		ret = encap_and_redirect_lxc(ctx, egress_gw_policy->gateway_ip, encrypt_key,
-					     &key, SECLABEL, *dst_id, &trace);
+		ret = encap_and_redirect_lxc(ctx, egress_gw_policy->gateway_ip,
+					     0, encrypt_key, &key, SECLABEL,
+					     *dst_id, &trace);
 		if (ret == CTX_ACT_OK)
 			goto encrypt_to_stack;
 		else
@@ -1082,7 +1084,7 @@ skip_egress_gateway:
 skip_vtep:
 #endif
 
-#ifdef TUNNEL_MODE
+#if defined(TUNNEL_MODE) || defined(ENABLE_HIGH_SCALE_IPCACHE)
 # ifdef ENABLE_WIREGUARD
 	/* In the tunnel mode we encapsulate pod2pod traffic only via Wireguard
 	 * device, i.e. we do not encapsulate twice.
@@ -1095,8 +1097,9 @@ skip_vtep:
 		key.ip4 = ip4->daddr & IPV4_MASK;
 		key.family = ENDPOINT_KEY_IPV4;
 
-		ret = encap_and_redirect_lxc(ctx, tunnel_endpoint, encrypt_key,
-					     &key, SECLABEL, *dst_id, &trace);
+		ret = encap_and_redirect_lxc(ctx, tunnel_endpoint, ip4->daddr,
+					     encrypt_key, &key, SECLABEL,
+					     *dst_id, &trace);
 		if (ret == DROP_NO_TUNNEL_ENDPOINT)
 			goto pass_to_stack;
 		/* If not redirected noteably due to IPSEC then pass up to stack
@@ -1110,7 +1113,7 @@ skip_vtep:
 		else
 			return ret;
 	}
-#endif /* TUNNEL_MODE */
+#endif /* TUNNEL_MODE || ENABLE_HIGH_SCALE_IPCACHE */
 	if (is_defined(ENABLE_HOST_ROUTING)) {
 		int oif;
 
@@ -1169,7 +1172,7 @@ pass_to_stack:
 #endif
 	}
 
-#if defined(TUNNEL_MODE) || defined(ENABLE_EGRESS_GATEWAY)
+#if defined(TUNNEL_MODE) || defined(ENABLE_EGRESS_GATEWAY) || defined(ENABLE_HIGH_SCALE_IPCACHE)
 encrypt_to_stack:
 #endif
 	send_trace_notify(ctx, TRACE_TO_STACK, SECLABEL, *dst_id, 0, 0,

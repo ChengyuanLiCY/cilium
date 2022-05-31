@@ -1041,6 +1041,15 @@ struct lpm_val {
 	__u8 flags;
 };
 
+static __always_inline __u64 ctx_adjust_hroom_flags(void)
+{
+#ifdef BPF_HAVE_CSUM_LEVEL
+	return BPF_F_ADJ_ROOM_NO_CSUM_RESET;
+#else
+	return 0;
+#endif
+}
+
 #include "overloadable.h"
 
 #endif /* __LIB_COMMON_H_ */

@@ -230,9 +230,15 @@ static __always_inline int handle_ipv4(struct __ctx_buff *ctx, __u32 *identity)
 	if (decrypted) {
 		*identity = key.tunnel_id = get_identity(ctx);
 	} else {
+#ifdef ENABLE_HIGH_SCALE_IPCACHE
+		*identity = key.tunnel_id = ctx_load_meta(ctx, CB_SRC_LABEL);
+		/*if (!*identity)
+			*identity = key.tunnel_id = ctx->mark;*/
+#else
 		if (unlikely(ctx_get_tunnel_key(ctx, &key, sizeof(key), 0) < 0))
 			return DROP_NO_TUNNEL_KEY;
 		*identity = key.tunnel_id;
+#endif /* ENABLE_HIGH_SCALE_IPCACHE */
 
 		if (*identity == HOST_ID)
 			return DROP_INVALID_IDENTITY;
@@ -438,7 +444,6 @@ int cil_from_overlay(struct __ctx_buff *ctx)
 	__u16 proto;
 	int ret;
 
-	bpf_clear_meta(ctx);
 	bpf_skip_nodeport_clear(ctx);
 
 	if (!validate_ethertype(ctx, &proto)) {

@@ -77,6 +77,7 @@ import (
 	"github.com/cilium/cilium/pkg/pidfile"
 	"github.com/cilium/cilium/pkg/policy"
 	"github.com/cilium/cilium/pkg/pprof"
+	"github.com/cilium/cilium/pkg/probe"
 	"github.com/cilium/cilium/pkg/sysctl"
 	"github.com/cilium/cilium/pkg/version"
 	wireguard "github.com/cilium/cilium/pkg/wireguard/agent"
@@ -1383,6 +1384,13 @@ func initEnv() {
 		}
 		if !option.Config.EnableWellKnownIdentities {
 			log.Fatal("The high-scale IPcache mode requires well-known identities to be enabled.")
+		}
+		supported, err := probe.HaveOuterSourceIPSupport()
+		if err != nil {
+			log.WithError(err).Fatal("Probing for outer source IP support in the kernel failed.")
+		}
+		if !supported {
+			log.Fatal("The high scale IPcache mode needs support in the kernel to set the outer source IP address.")
 		}
 	}
 

@@ -177,9 +177,9 @@ static __always_inline bool ctx_snat_done(struct __sk_buff *ctx)
 
 #ifdef HAVE_ENCAP
 static __always_inline __maybe_unused int
-ctx_set_encap_info(struct __sk_buff *ctx, __u32 node_id, __u32 seclabel,
-		   __u32 dstid __maybe_unused, __u32 vni __maybe_unused,
-		   __u32 *ifindex)
+ctx_set_encap_info(struct __sk_buff *ctx, __u32 src_ip, __u32 node_id,
+		   __u32 seclabel, __u32 dstid __maybe_unused,
+		   __u32 vni __maybe_unused, __u32 *ifindex)
 {
 	struct bpf_tunnel_key key = {};
 	int ret;
@@ -191,6 +191,7 @@ ctx_set_encap_info(struct __sk_buff *ctx, __u32 node_id, __u32 seclabel,
 #endif /* ENABLE_VTEP */
 		key.tunnel_id = seclabel;
 
+	key.local_ipv4 = bpf_htonl(src_ip);
 	key.remote_ipv4 = node_id;
 	key.tunnel_ttl = IPDEFTTL;
 

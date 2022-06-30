@@ -75,6 +75,7 @@ enum {
 	XFER_ENCAP_NODEID = 1,
 	XFER_ENCAP_SECLABEL = 2,
 	XFER_ENCAP_DSTID = 3,
+	XFER_ENCAP_SRCIP = 4,
 };
 
 /* These are shared with test/bpf/check-complexity.sh, when modifying any of
@@ -674,6 +675,7 @@ enum {
 #define	CB_ADDR_V6_3		CB_NAT		/* Alias, non-overlapping */
 #define	CB_FROM_HOST		CB_NAT		/* Alias, non-overlapping */
 #define CB_SRV6_SID_4		CB_NAT		/* Alias, non-overlapping */
+#define CB_ENCAP_SRCIP		CB_NAT		/* Alias, non-overlapping */
 	CB_CT_STATE,
 #define	CB_ADDR_V6_4		CB_CT_STATE	/* Alias, non-overlapping */
 #define	CB_ENCRYPT_DST		CB_CT_STATE	/* Alias, non-overlapping,

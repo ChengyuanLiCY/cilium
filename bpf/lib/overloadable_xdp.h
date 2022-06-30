@@ -100,12 +100,14 @@ static __always_inline __maybe_unused void ctx_move_xfer(struct xdp_md *ctx)
 	 * does not break packet trains in GRO.
 	 */
 	if (meta_xfer & XFER_PKT_ENCAP) {
-		if (!ctx_adjust_meta(ctx, -(int)(4 * sizeof(__u32)))) {
+		if (!ctx_adjust_meta(ctx, -(int)(5 * sizeof(__u32)))) {
 			__u32 *data_meta = ctx_data_meta(ctx);
 			__u32 *data = ctx_data(ctx);
 
-			if (!ctx_no_room(data_meta + 4, data)) {
+			if (!ctx_no_room(data_meta + 5, data)) {
 				data_meta[XFER_FLAGS] = meta_xfer;
+				data_meta[XFER_ENCAP_SRCIP] =
+					ctx_load_meta(ctx, CB_ENCAP_SRCIP);
 				data_meta[XFER_ENCAP_NODEID] =
 					ctx_load_meta(ctx, CB_ENCAP_NODEID);
 				data_meta[XFER_ENCAP_SECLABEL] =
@@ -146,7 +148,7 @@ static __always_inline bool ctx_snat_done(struct xdp_md *ctx)
 
 #ifdef HAVE_ENCAP
 static __always_inline __maybe_unused int
-ctx_set_encap_info(struct xdp_md *ctx __maybe_unused,
+ctx_set_encap_info(struct xdp_md *ctx __maybe_unused, __u32 src_ip,
 		   __u32 node_id __maybe_unused,
 		   __u32 seclabel __maybe_unused,
 		   __u32 dstid __maybe_unused,
@@ -155,6 +157,7 @@ ctx_set_encap_info(struct xdp_md *ctx __maybe_unused,
 	ctx_store_meta(ctx, CB_ENCAP_NODEID, bpf_ntohl(node_id));
 	ctx_store_meta(ctx, CB_ENCAP_SECLABEL, seclabel);
 	ctx_store_meta(ctx, CB_ENCAP_DSTID, dstid);
+	ctx_store_meta(ctx, CB_ENCAP_SRCIP, src_ip);
 	ctx_set_xfer(ctx, XFER_PKT_ENCAP);
 
 	return CTX_ACT_OK;

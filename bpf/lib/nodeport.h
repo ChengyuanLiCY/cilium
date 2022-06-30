@@ -604,7 +604,7 @@ int tail_nodeport_nat_egress_ipv6(struct __ctx_buff *ctx)
 	dst = (union v6addr *)&ip6->daddr;
 	info = ipcache_lookup6(&IPCACHE_MAP, dst, V6_CACHE_KEY_LEN);
 	if (info && info->tunnel_endpoint != 0) {
-		ret = __encap_with_nodeid(ctx, info->tunnel_endpoint,
+		ret = __encap_with_nodeid(ctx, 0, info->tunnel_endpoint,
 					  WORLD_ID,
 					  info->sec_label,
 					  NOT_VTEP_DST,
@@ -900,7 +900,8 @@ static __always_inline int rev_nodeport_lb6(struct __ctx_buff *ctx, __u32 *ifind
 
 			info = ipcache_lookup6(&IPCACHE_MAP, dst, V6_CACHE_KEY_LEN);
 			if (info != NULL && info->tunnel_endpoint != 0) {
-				return __encap_with_nodeid(ctx, info->tunnel_endpoint,
+				return __encap_with_nodeid(ctx, 0,
+							   info->tunnel_endpoint,
 							   SECLABEL, info->sec_label,
 							   NOT_VTEP_DST,
 							   TRACE_REASON_CT_REPLY,
@@ -1512,7 +1513,7 @@ int tail_nodeport_nat_egress_ipv4(struct __ctx_buff *ctx)
 		 * bypass any netpol which disallows LB requests from
 		 * outside.
 		 */
-		ret = __encap_with_nodeid(ctx, info->tunnel_endpoint,
+		ret = __encap_with_nodeid(ctx, 0, info->tunnel_endpoint,
 					  WORLD_ID,
 					  info->sec_label,
 					  NOT_VTEP_DST,
@@ -1917,7 +1918,7 @@ static __always_inline int rev_nodeport_lb4(struct __ctx_buff *ctx, __u32 *ifind
 
 #if (defined(ENABLE_EGRESS_GATEWAY) || defined(TUNNEL_MODE))
 encap_redirect:
-	return __encap_with_nodeid(ctx, tunnel_endpoint, SECLABEL, dst_id,
+	return __encap_with_nodeid(ctx, 0, tunnel_endpoint, SECLABEL, dst_id,
 				   NOT_VTEP_DST, reason, monitor, ifindex);
 #endif
 }

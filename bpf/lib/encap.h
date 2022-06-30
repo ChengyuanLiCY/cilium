@@ -113,7 +113,7 @@ encap_remap_v6_host_address(struct __ctx_buff *ctx __maybe_unused,
 }
 
 static __always_inline int
-__encap_with_nodeid(struct __ctx_buff *ctx, __u32 tunnel_endpoint,
+__encap_with_nodeid(struct __ctx_buff *ctx, __u32 src_ip, __u32 tunnel_endpoint,
 		    __u32 seclabel, __u32 dstid, __u32 vni __maybe_unused,
 		    enum trace_reason ct_reason, __u32 monitor, __u32 *ifindex)
 {
@@ -131,7 +131,7 @@ __encap_with_nodeid(struct __ctx_buff *ctx, __u32 tunnel_endpoint,
 
 	cilium_dbg(ctx, DBG_ENCAP, node_id, seclabel);
 
-	ret = ctx_set_encap_info(ctx, node_id, seclabel, dstid, vni, ifindex);
+	ret = ctx_set_encap_info(ctx, src_ip, node_id, seclabel, dstid, vni, ifindex);
 	if (ret == CTX_ACT_REDIRECT)
 		send_trace_notify(ctx, TRACE_TO_OVERLAY, seclabel, dstid, 0, *ifindex,
 				  ct_reason, monitor);
@@ -140,15 +140,15 @@ __encap_with_nodeid(struct __ctx_buff *ctx, __u32 tunnel_endpoint,
 }
 
 static __always_inline int
-__encap_and_redirect_with_nodeid(struct __ctx_buff *ctx, __u32 tunnel_endpoint,
-				 __u32 seclabel, __u32 dstid, __u32 vni,
-				 const struct trace_ctx *trace)
+__encap_and_redirect_with_nodeid(struct __ctx_buff *ctx, __u32 src_ip __maybe_unused,
+				 __u32 tunnel_endpoint, __u32 seclabel, __u32 dstid,
+				 __u32 vni, const struct trace_ctx *trace)
 {
 	__u32 ifindex;
 
-	int ret = __encap_with_nodeid(ctx, tunnel_endpoint, seclabel, dstid,
-				      vni, trace->reason, trace->monitor,
-				      &ifindex);
+	int ret = __encap_with_nodeid(ctx, src_ip, tunnel_endpoint, seclabel,
+				      dstid, vni, trace->reason,
+				      trace->monitor, &ifindex);
 	if (ret != CTX_ACT_REDIRECT)
 		return ret;
 
@@ -169,7 +169,8 @@ encap_and_redirect_with_nodeid(struct __ctx_buff *ctx, __u32 tunnel_endpoint,
 	if (key)
 		return encap_and_redirect_nomark_ipsec(ctx, tunnel_endpoint, key, seclabel);
 #endif
-	return __encap_and_redirect_with_nodeid(ctx, tunnel_endpoint, seclabel, dstid, NOT_VTEP_DST,
+	return __encap_and_redirect_with_nodeid(ctx, 0, tunnel_endpoint,
+						seclabel, dstid, NOT_VTEP_DST,
 						trace);
 }
 
@@ -185,7 +186,7 @@ encap_and_redirect_with_nodeid(struct __ctx_buff *ctx, __u32 tunnel_endpoint,
  */
 static __always_inline int
 encap_and_redirect_lxc(struct __ctx_buff *ctx, __u32 tunnel_endpoint,
-		       __u32 dst_ip __maybe_unused,
+		       __u32 src_ip __maybe_unused, __u32 dst_ip __maybe_unused,
 		       __u8 encrypt_key __maybe_unused,
 		       struct endpoint_key *key __maybe_unused, __u32 seclabel,
 		       __u32 dstid, const struct trace_ctx *trace)
@@ -203,9 +204,9 @@ encap_and_redirect_lxc(struct __ctx_buff *ctx, __u32 tunnel_endpoint,
 	if (!tunnel_endpoint && ipv4_is_in_subnet(dst_ip,
 						  IPV4_NATIVE_ROUTING_CIDR,
 						  IPV4_NATIVE_ROUTING_CIDR_LEN))
-		return __encap_and_redirect_with_nodeid(ctx, dst_ip, seclabel,
-							dstid, NOT_VTEP_DST,
-							trace);
+		return __encap_and_redirect_with_nodeid(ctx, src_ip, dst_ip,
+							seclabel, dstid,
+							NOT_VTEP_DST, trace);
 	return DROP_NO_TUNNEL_ENDPOINT;
 #else /* ENABLE_HIGH_SCALE_IPCACHE */
 	if (tunnel_endpoint) {
@@ -222,16 +223,18 @@ encap_and_redirect_lxc(struct __ctx_buff *ctx, __u32 tunnel_endpoint,
 		 * the tunnel, to apply the correct reverse DNAT.
 		 * See #14674 for details.
 		 */
-		ret = __encap_with_nodeid(ctx, tunnel_endpoint, seclabel, dstid, NOT_VTEP_DST,
-					  trace->reason, trace->monitor, &ifindex);
+		ret = __encap_with_nodeid(ctx, 0, tunnel_endpoint, seclabel,
+					  dstid, NOT_VTEP_DST, trace->reason,
+					  trace->monitor, &ifindex);
 		if (ret != CTX_ACT_REDIRECT)
 			return ret;
 
 		/* tell caller that this packet needs to go through the stack: */
 		return CTX_ACT_OK;
 # else
-		return __encap_and_redirect_with_nodeid(ctx, tunnel_endpoint,
-							seclabel, dstid, NOT_VTEP_DST, trace);
+		return __encap_and_redirect_with_nodeid(ctx, 0, tunnel_endpoint,
+							seclabel, dstid,
+							NOT_VTEP_DST, trace);
 # endif /* !ENABLE_NODEPORT && (ENABLE_IPSEC || ENABLE_HOST_FIREWALL) */
 	}
 
@@ -249,7 +252,7 @@ encap_and_redirect_lxc(struct __ctx_buff *ctx, __u32 tunnel_endpoint,
 						seclabel);
 	}
 # endif
-	return __encap_and_redirect_with_nodeid(ctx, tunnel->ip4, seclabel,
+	return __encap_and_redirect_with_nodeid(ctx, 0, tunnel->ip4, seclabel,
 						dstid, NOT_VTEP_DST, trace);
 #endif /* ENABLE_HIGH_SCALE_IPCACHE */
 }
@@ -272,7 +275,7 @@ encap_and_redirect_netdev(struct __ctx_buff *ctx, struct endpoint_key *k,
 						       key, seclabel);
 	}
 #endif
-	return __encap_and_redirect_with_nodeid(ctx, tunnel->ip4, seclabel,
+	return __encap_and_redirect_with_nodeid(ctx, 0, tunnel->ip4, seclabel,
 						0, NOT_VTEP_DST, trace);
 }
 #endif /* HAVE_ENCAP */

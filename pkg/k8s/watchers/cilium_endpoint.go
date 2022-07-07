@@ -169,17 +169,13 @@ func (k *K8sWatcher) endpointUpdated(oldEndpoint, endpoint *types.CiliumEndpoint
 	}
 
 	if option.Config.EnableHighScaleIPcache &&
-		nodeIP.String() != node.GetIPv4().String() &&
-		nodeIP.String() != node.GetIPv6().String() &&
 		!identity.IsWellKnownIdentity(id) {
 		// Well-known identities are kept in the high-scale ipcache because we
 		// need to be able to connect to the DNS pods to resolve FQDN policies.
 		scopedLog := log.WithFields(logrus.Fields{
 			logfields.Identity: id,
-			logfields.IPv4:     endpoint.Networking.Addressing[0].IPV4,
-			logfields.IPv6:     endpoint.Networking.Addressing[0].IPV6,
 		})
-		scopedLog.Debug("Endpoint is not local; skipping ipcache upsert")
+		scopedLog.Debug("Endpoint is not well-known; skipping ipcache upsert")
 		return
 	}
 

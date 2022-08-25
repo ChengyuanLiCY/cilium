@@ -92,6 +92,7 @@ import (
 	"github.com/cilium/cilium/pkg/status"
 	"github.com/cilium/cilium/pkg/trigger"
 	wg "github.com/cilium/cilium/pkg/wireguard/agent"
+	"github.com/cilium/cilium/pkg/worldcidrs"
 	cnitypes "github.com/cilium/cilium/plugins/cilium-cni/types"
 )
 
@@ -188,6 +189,8 @@ type Daemon struct {
 	egressGatewayManager *egressgateway.Manager
 
 	cgroupManager *manager.CgroupManager
+
+	worldCIDRsManager *worldcidrs.Manager
 
 	apiLimiterSet *rate.APILimiterSet
 
@@ -654,6 +657,10 @@ func NewDaemon(ctx context.Context, cleaner *daemonCleanup,
 
 	if option.Config.EnableIPv4EgressGateway {
 		d.egressGatewayManager = egressgateway.NewEgressGatewayManager(&d, d.identityAllocator)
+	}
+
+	if option.Config.EnableHighScaleIPcache {
+		d.worldCIDRsManager = worldcidrs.NewWorldCIDRsManager(&d)
 	}
 
 	d.k8sWatcher = watchers.NewK8sWatcher(

@@ -52,6 +52,7 @@ import (
 	"github.com/cilium/cilium/pkg/policy"
 	"github.com/cilium/cilium/pkg/policy/api"
 	"github.com/cilium/cilium/pkg/redirectpolicy"
+	"github.com/cilium/cilium/pkg/worldcidrs"
 )
 
 const (
@@ -172,6 +173,11 @@ type egressGatewayManager interface {
 	OnDeleteNode(node nodeTypes.Node)
 }
 
+type worldCIDRsManager interface {
+	OnAddWorldCIDRSet(_ worldcidrs.CIDRSet)
+	OnDeleteWorldCIDRSet(_ types.NamespacedName)
+}
+
 type envoyConfigManager interface {
 	UpsertEnvoyResources(context.Context, envoy.Resources, envoy.PortAllocator) error
 	UpdateEnvoyResources(ctx context.Context, old, new envoy.Resources, portAllocator envoy.PortAllocator) error
@@ -223,6 +229,7 @@ type K8sWatcher struct {
 	redirectPolicyManager redirectPolicyManager
 	bgpSpeakerManager     bgpSpeakerManager
 	egressGatewayManager  egressGatewayManager
+	worldCIDRsManager     worldCIDRsManager
 	ipcache               *ipcache.IPCache
 	envoyConfigManager    envoyConfigManager
 	cgroupManager         cgroupManager
@@ -266,6 +273,7 @@ func NewK8sWatcher(
 	redirectPolicyManager redirectPolicyManager,
 	bgpSpeakerManager bgpSpeakerManager,
 	egressGatewayManager egressGatewayManager,
+	worldCIDRsManager worldCIDRsManager,
 	envoyConfigManager envoyConfigManager,
 	cfg WatcherConfiguration,
 	ipcache *ipcache.IPCache,
@@ -287,6 +295,7 @@ func NewK8sWatcher(
 		bgpSpeakerManager:     bgpSpeakerManager,
 		egressGatewayManager:  egressGatewayManager,
 		cgroupManager:         cgroupManager,
+		worldCIDRsManager:     worldCIDRsManager,
 		NodeChain:             subscriber.NewNodeChain(),
 		CiliumNodeChain:       subscriber.NewCiliumNodeChain(),
 		envoyConfigManager:    envoyConfigManager,
@@ -558,6 +567,8 @@ func (k *K8sWatcher) enableK8sWatchers(ctx context.Context, resourceNames []stri
 			k.ciliumClusterwideEnvoyConfigInit(ciliumNPClient)
 		case k8sAPIGroupCiliumEnvoyConfigV2:
 			k.ciliumEnvoyConfigInit(ciliumNPClient)
+		case k8sAPIGroupCiliumWorldCIDRSetV2:
+			k.ciliumWorldCIDRSetInit(ciliumNPClient)
 		default:
 			log.WithFields(logrus.Fields{
 				logfields.Resource: r,

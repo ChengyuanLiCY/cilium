@@ -174,6 +174,30 @@ encap_and_redirect_with_nodeid(struct __ctx_buff *ctx, __u32 tunnel_endpoint,
 						trace);
 }
 
+#ifdef ENABLE_HIGH_SCALE_IPCACHE
+/* WORLD_CIDR_STATIC_PREFIX4 gets sizeof non-IP, non-prefix part of
+ * world_cidrs_key4.
+ */
+# define WORLD_CIDR_STATIC_PREFIX4						\
+	(8 * (sizeof(struct world_cidrs_key4) - sizeof(struct bpf_lpm_trie_key)	\
+	      - sizeof(__u32)))
+#define WORLD_CIDR_PREFIX_LEN4(PREFIX) (WORLD_CIDR_STATIC_PREFIX4 + (PREFIX))
+
+static __always_inline __maybe_unused bool
+world_cirds_lookup4(__u32 addr)
+{
+	__u8 *matches;
+	struct world_cidrs_key4 key = {
+		.lpm_key = { WORLD_CIDR_PREFIX_LEN4(V4_CACHE_KEY_LEN), {} },
+		.ip = addr,
+	};
+
+	key.ip &= GET_PREFIX(V4_CACHE_KEY_LEN);
+	matches = map_lookup_elem(&WORLD_CIDRS4_MAP, &key);
+	return matches != NULL;
+}
+#endif /* ENABLE_HIGH_SCALE_IPCACHE */
+
 /* encap_and_redirect based on ENABLE_IPSEC flag and from_host bool will decide
  * which version of code to call. With IPSec enabled and from_host set use the
  * IPSec branch which configures metadata for IPSec kernel stack. Otherwise
@@ -185,7 +209,7 @@ encap_and_redirect_with_nodeid(struct __ctx_buff *ctx, __u32 tunnel_endpoint,
  * and finally on successful redirect returns CTX_ACT_REDIRECT.
  */
 static __always_inline int
-encap_and_redirect_lxc(struct __ctx_buff *ctx, __u32 tunnel_endpoint,
+encap_and_redirect_lxc(struct __ctx_buff *ctx, __u32 tunnel_endpoint __maybe_unused,
 		       __u32 src_ip __maybe_unused, __u32 dst_ip __maybe_unused,
 		       __u8 encrypt_key __maybe_unused,
 		       struct endpoint_key *key __maybe_unused, __u32 seclabel,
@@ -196,14 +220,12 @@ encap_and_redirect_lxc(struct __ctx_buff *ctx, __u32 tunnel_endpoint,
 	int ret __maybe_unused;
 
 #ifdef ENABLE_HIGH_SCALE_IPCACHE
-	/* If the destination was not found in the ipcache (no tunnel endpoint)
-	 * and it is part of the native routing CIDR, then it's assumed to be a
-	 * remote pod. In that case, since the high-scale ipcache is enabled,
-	 * we want to encapsulate with the remote pod's IP itself.
+	/* If the destination doesn't match one of the world CIDRs, we assume
+	 * it's destined to a remote pod. In that case, since the high-scale
+	 * ipcache is enabled, we want to encapsulate with the remote pod's IP
+	 * itself.
 	 */
-	if (!tunnel_endpoint && ipv4_is_in_subnet(dst_ip,
-						  IPV4_NATIVE_ROUTING_CIDR,
-						  IPV4_NATIVE_ROUTING_CIDR_LEN))
+	if (!world_cirds_lookup4(dst_ip))
 		return __encap_and_redirect_with_nodeid(ctx, src_ip, dst_ip,
 							seclabel, dstid,
 							NOT_VTEP_DST, trace);

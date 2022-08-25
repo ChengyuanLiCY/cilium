@@ -178,6 +178,10 @@ DEFINE_U32(SECCTX_FROM_IPCACHE, 1);
 #define LB4_HEALTH_MAP test_cilium_lb4_health
 #define LB6_HEALTH_MAP test_cilium_lb6_health
 #endif /* ENABLE_NODEPORT || ENABLE_HOST_FIREWALL */
+#ifdef ENABLE_HIGH_SCALE_IPCACHE
+# define WORLD_CIDRS4_MAP test_cilium_world_cidrs4
+# define WORLD_CIDRS4_MAP_SIZE 16384
+#endif /* ENABLE_HIGH_SCALE_IPCACHE */
 
 #ifdef ENABLE_NODEPORT
 #ifdef ENABLE_IPV4

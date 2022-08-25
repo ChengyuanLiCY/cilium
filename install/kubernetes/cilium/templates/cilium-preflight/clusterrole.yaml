@@ -79,6 +79,7 @@ rules:
   - ciliumlocalredirectpolicies
   - ciliumnetworkpolicies
   - ciliumnodes
+  - ciliumworldcidrsets
   verbs:
   - list
   - watch

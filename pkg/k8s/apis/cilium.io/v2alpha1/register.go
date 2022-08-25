@@ -83,6 +83,20 @@ const (
 
 	// BGPPoolName is the full name of Cilium BGP Load Balancer IP Pool
 	BGPPoolName = BGPPoolPluralName + "." + CustomResourceDefinitionGroup
+
+	// CiliumWorldCIDRSet (CWCIDR)
+
+	// CWCIDRSingularName is the singular name of CiliumWorldCIDRSet
+	CWCIDRSingularName = "ciliumworldcidrset"
+
+	// CWCIDRPluralName is the plural name of CiliumWorldCIDRSet
+	CWCIDRPluralName = "ciliumworldcidrsets"
+
+	// CWCIDRKindDefinition is the kind name of CiliumWorldCIDRSet
+	CWCIDRKindDefinition = "CiliumWorldCIDRSet"
+
+	// CWCIDRName is the full name of CiliumWorldCIDRSet
+	CWCIDRName = CWCIDRPluralName + "." + CustomResourceDefinitionGroup
 )
 
 // SchemeGroupVersion is group version used to register these objects
@@ -134,6 +148,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&CiliumBGPPeeringPolicyList{},
 		&CiliumBGPLoadBalancerIPPool{},
 		&CiliumBGPLoadBalancerIPPoolList{},
+		&CiliumWorldCIDRSet{},
+		&CiliumWorldCIDRSetList{},
 	)
 
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)

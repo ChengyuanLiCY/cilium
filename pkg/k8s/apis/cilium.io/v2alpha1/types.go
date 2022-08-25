@@ -127,3 +127,43 @@ type CiliumEndpointSliceList struct {
 	// Items is a list of CiliumEndpointSlice.
 	Items []CiliumEndpointSlice `json:"items"`
 }
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:resource:categories={cilium},singular="ciliumworldcidrset",path="ciliumworldcidrsets",scope="Cluster",shortName={cwcidr}
+// +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name="Age",type=date
+// +kubebuilder:storageversion
+
+type CiliumWorldCIDRSet struct {
+	// +k8s:openapi-gen=false
+	// +deepequal-gen=false
+	metav1.TypeMeta `json:",inline"`
+	// +k8s:openapi-gen=false
+	// +deepequal-gen=false
+	metav1.ObjectMeta `json:"metadata"`
+
+	Spec CiliumWorldCIDRSetSpec `json:"spec,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +k8s:openapi-gen=false
+// +deepequal-gen=false
+
+// CiliumWorldCIDRSetList is a list of CiliumWorldCIDRSet objects.
+type CiliumWorldCIDRSetList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	// Items is a list of CiliumEgressNATPolicy.
+	Items []CiliumWorldCIDRSet `json:"items"`
+}
+
+// +kubebuilder:validation:Pattern=`^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/([0-9]|[1-2][0-9]|3[0-2])$|^s*((([0-9A-Fa-f]{1,4}:){7}(:|([0-9A-Fa-f]{1,4})))|(([0-9A-Fa-f]{1,4}:){6}:([0-9A-Fa-f]{1,4})?)|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){0,1}):([0-9A-Fa-f]{1,4})?))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){0,2}):([0-9A-Fa-f]{1,4})?))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){0,3}):([0-9A-Fa-f]{1,4})?))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){0,4}):([0-9A-Fa-f]{1,4})?))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){0,5}):([0-9A-Fa-f]{1,4})?))|(:(:|((:[0-9A-Fa-f]{1,4}){1,7}))))(%.+)?s*\/([0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8])$`
+type CIDR string
+
+type CiliumWorldCIDRSetSpec struct {
+	// WorldCIDRs is a list of IPv4 and IPv6 CIDRs that will be considered
+	// outside the cluster.
+	WorldCIDRs []CIDR `json:"worldCIDRs"`
+}

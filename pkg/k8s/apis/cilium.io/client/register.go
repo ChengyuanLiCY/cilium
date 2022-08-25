@@ -75,6 +75,9 @@ const (
 
 	// BGPPoolCRDName is the full name of the BGPPool CRD.
 	BGPPoolCRDName = k8sconstv2alpha1.BGPPoolKindDefinition + "/" + k8sconstv2alpha1.CustomResourceDefinitionVersion
+
+	// CWCIDRCRDName is the full name of the CWCIDR CRD.
+	CWCIDRCRDName = k8sconstv2alpha1.CWCIDRKindDefinition + "/" + k8sconstv2alpha1.CustomResourceDefinitionVersion
 )
 
 var (
@@ -106,6 +109,7 @@ func CreateCustomResourceDefinitions(clientset apiextensionsclient.Interface) er
 		synced.CRDResourceName(k8sconstv2.CECName):           createCECCRD,
 		synced.CRDResourceName(k8sconstv2alpha1.BGPPName):    createBGPPCRD,
 		synced.CRDResourceName(k8sconstv2alpha1.BGPPoolName): createBGPPoolCRD,
+		synced.CRDResourceName(k8sconstv2alpha1.CWCIDRName):  createCWCIDRCRD,
 	}
 	for _, r := range synced.AllCRDResourceNames() {
 		fn, ok := resourceToCreateFnMapping[r]
@@ -162,6 +166,9 @@ var (
 
 	//go:embed crds/v2alpha1/ciliumbgploadbalancerippools.yaml
 	crdsv2Alpha1Ciliumbgploadbalancerippools []byte
+
+	//go:embed crds/v2alpha1/ciliumworldcidrsets.yaml
+	crdsv2Alpha1Ciliumworldcidrsets []byte
 )
 
 // GetPregeneratedCRD returns the pregenerated CRD based on the requested CRD
@@ -205,6 +212,8 @@ func GetPregeneratedCRD(crdName string) apiextensionsv1.CustomResourceDefinition
 		crdBytes = crdsv2Alpha1Ciliumbgppeeringpolicies
 	case BGPPoolCRDName:
 		crdBytes = crdsv2Alpha1Ciliumbgploadbalancerippools
+	case CWCIDRCRDName:
+		crdBytes = crdsv2Alpha1Ciliumworldcidrsets
 	default:
 		scopedLog.Fatal("Pregenerated CRD does not exist")
 	}
@@ -386,6 +395,17 @@ func createBGPPoolCRD(clientset apiextensionsclient.Interface) error {
 		clientset,
 		BGPPoolCRDName,
 		constructV1CRD(k8sconstv2alpha1.BGPPoolName, ciliumCRD),
+		newDefaultPoller(),
+	)
+}
+
+func createCWCIDRCRD(clientset apiextensionsclient.Interface) error {
+	ciliumCRD := GetPregeneratedCRD(CWCIDRCRDName)
+
+	return createUpdateCRD(
+		clientset,
+		CWCIDRCRDName,
+		constructV1CRD(k8sconstv2alpha1.CWCIDRName, ciliumCRD),
 		newDefaultPoller(),
 	)
 }

@@ -57,6 +57,7 @@ import (
 	"github.com/cilium/cilium/pkg/k8s"
 	k8sConst "github.com/cilium/cilium/pkg/k8s/apis/cilium.io"
 	k8sClient "github.com/cilium/cilium/pkg/k8s/client"
+	slim_corev1 "github.com/cilium/cilium/pkg/k8s/slim/k8s/api/core/v1"
 	"github.com/cilium/cilium/pkg/k8s/watchers"
 	"github.com/cilium/cilium/pkg/labels"
 	"github.com/cilium/cilium/pkg/lock"
@@ -166,6 +167,9 @@ type Daemon struct {
 	ipcache *ipcache.IPCache
 
 	k8sWatcher *watchers.K8sWatcher
+
+	// endpointMetadataFetcher knows how to fetch Kubernetes metadata for endpoints.
+	endpointMetadataFetcher endpointMetadataFetcher
 
 	// healthEndpointRouting is the information required to set up the health
 	// endpoint's routing in ENI or Azure IPAM mode
@@ -1486,4 +1490,8 @@ func (d *Daemon) K8sCacheIsSynced() bool {
 	default:
 		return false
 	}
+}
+
+type endpointMetadataFetcher interface {
+	Fetch(nsName, podName string) (*slim_corev1.Namespace, *slim_corev1.Pod, error)
 }

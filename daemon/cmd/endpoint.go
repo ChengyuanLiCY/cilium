@@ -13,8 +13,10 @@ import (
 	"sync"
 	"time"
 
+	slimclientset "github.com/cilium/cilium/pkg/k8s/slim/k8s/client/clientset/versioned"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/cilium/cilium/api/v1/models"
 	. "github.com/cilium/cilium/api/v1/server/restapi/endpoint"
@@ -28,6 +30,7 @@ import (
 	"github.com/cilium/cilium/pkg/k8s"
 	k8sConst "github.com/cilium/cilium/pkg/k8s/apis/cilium.io"
 	slim_corev1 "github.com/cilium/cilium/pkg/k8s/slim/k8s/api/core/v1"
+	"github.com/cilium/cilium/pkg/k8s/watchers"
 	"github.com/cilium/cilium/pkg/labels"
 	"github.com/cilium/cilium/pkg/labelsfilter"
 	"github.com/cilium/cilium/pkg/lock"
@@ -170,11 +173,7 @@ func NewPutEndpointIDHandler(d *Daemon) PutEndpointIDHandler {
 // The returned pod is deepcopied which means the its fields can be written
 // into.
 func (d *Daemon) fetchK8sMetadataForEndpoint(nsName, podName string) (*slim_corev1.Pod, []slim_corev1.ContainerPort, labels.Labels, labels.Labels, map[string]string, error) {
-	p, err := d.k8sWatcher.GetCachedPod(nsName, podName)
-	if err != nil {
-		return nil, nil, nil, nil, nil, err
-	}
-	ns, err := d.k8sWatcher.GetCachedNamespace(nsName)
+	ns, p, err := d.endpointMetadataFetcher.Fetch(nsName, podName)
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
 	}
@@ -187,6 +186,38 @@ func (d *Daemon) fetchK8sMetadataForEndpoint(nsName, podName string) (*slim_core
 	k8sLbls := labels.Map2Labels(lbls, labels.LabelSourceK8s)
 	identityLabels, infoLabels := labelsfilter.Filter(k8sLbls)
 	return p, containerPorts, identityLabels, infoLabels, annotations, nil
+}
+
+type cachedEndpointMetadataFetcher struct {
+	k8sWatcher *watchers.K8sWatcher
+}
+
+func (cemf *cachedEndpointMetadataFetcher) Fetch(nsName, podName string) (*slim_corev1.Namespace, *slim_corev1.Pod, error) {
+	p, err := cemf.k8sWatcher.GetCachedPod(nsName, podName)
+	if err != nil {
+		return nil, nil, err
+	}
+	ns, err := cemf.k8sWatcher.GetCachedNamespace(nsName)
+	if err != nil {
+		return nil, nil, err
+	}
+	return ns, p, err
+}
+
+type uncachedEndpointMetadataFetcher struct {
+	slimcli slimclientset.Interface
+}
+
+func (uemf *uncachedEndpointMetadataFetcher) Fetch(nsName, podName string) (*slim_corev1.Namespace, *slim_corev1.Pod, error) {
+	p, err := uemf.slimcli.CoreV1().Pods(nsName).Get(context.TODO(), podName, metav1.GetOptions{})
+	if err != nil {
+		return nil, nil, err
+	}
+	ns, err := uemf.slimcli.CoreV1().Namespaces().Get(context.TODO(), nsName, metav1.GetOptions{})
+	if err != nil {
+		return nil, nil, err
+	}
+	return ns, p, err
 }
 
 func invalidDataError(ep *endpoint.Endpoint, err error) (*endpoint.Endpoint, int, error) {

@@ -150,6 +150,12 @@ func (k *K8sWatcher) podsInit(slimClient slimclientset.Interface, asyncControlle
 		return
 	}
 
+	// Disable watching pods if we are in high-scale mode. We don't need to
+	// insert pod IPs into the ipcache.
+	if option.Config.EnableHighScaleIPcache {
+		return
+	}
+
 	// If CiliumEndpointCRD is disabled, we will fallback on watching all pods
 	// and then watching on the pods created for this node if the
 	// K8sEventHandover is enabled.
@@ -204,12 +210,6 @@ func (k *K8sWatcher) addK8sPodV1(pod *slim_corev1.Pod) error {
 		"hostIP":               pod.Status.HostIP,
 	})
 
-	// Disable watching pods if we are in high-scale mode. We don't need to
-	// insert pod IPs into the ipcache.
-	if option.Config.EnableHighScaleIPcache {
-		return nil
-	}
-
 	// In Kubernetes Jobs, Pods can be left in Kubernetes until the Job
 	// is deleted. If the Job is never deleted, Cilium will never receive a Pod
 	// delete event, causing the IP to be left in the ipcache.
@@ -247,12 +247,6 @@ func (k *K8sWatcher) addK8sPodV1(pod *slim_corev1.Pod) error {
 
 func (k *K8sWatcher) updateK8sPodV1(oldK8sPod, newK8sPod *slim_corev1.Pod) error {
 	if oldK8sPod == nil || newK8sPod == nil {
-		return nil
-	}
-
-	// Disable watching pods if we are in high-scale mode. We don't need to
-	// insert pod IPs into the ipcache.
-	if option.Config.EnableHighScaleIPcache {
 		return nil
 	}
 
@@ -711,11 +705,6 @@ func (k *K8sWatcher) updatePodHostData(oldPod, newPod *slim_corev1.Pod, oldPodIP
 
 	if newPod.Spec.HostNetwork {
 		logger.Debug("Pod is using host networking")
-		return nil
-	}
-
-	if option.Config.EnableHighScaleIPcache && nodeTypes.GetName() != newPod.Spec.NodeName {
-		logger.Debug("Pod is not local; skipping ipcache upsert")
 		return nil
 	}
 

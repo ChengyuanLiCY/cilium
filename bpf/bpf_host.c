@@ -3,6 +3,7 @@
 
 #include <bpf/ctx/skb.h>
 #include <bpf/api.h>
+#include <linux/geneve.h>
 #include <linux/vxlan.h>
 
 #include <node_config.h>
@@ -1193,33 +1194,48 @@ int cil_from_host(struct __ctx_buff *ctx)
 			return CTX_ACT_DROP;
 		}
 		if (proto != bpf_htons(ETH_P_IP))
-			goto skip_vxlan_decap;
+			goto skip_decap;
 
 		if (!revalidate_data(ctx, &data, &data_end, &ip4))
 			return CTX_ACT_DROP;
 		if (ip4->protocol != IPPROTO_UDP)
-			goto skip_vxlan_decap;
+			goto skip_decap;
 
 		off = ((void *)ip4 - data) + ipv4_hdrlen(ip4) + offsetof(struct udphdr, dest);
 		if (ctx_load_bytes(ctx, off, &dport, sizeof(__u16)) < 0)
 			return CTX_ACT_DROP;
 
-		if (dport == bpf_htons(TUNNEL_PORT)) {
-			off = ((void *)ip4 - data) + ipv4_hdrlen(ip4) + sizeof(struct udphdr) +
-			      offsetof(struct vxlanhdr, vx_vni);
-			if (ctx_load_bytes(ctx, off, &src_id, sizeof(__u32)) < 0)
-				return CTX_ACT_DROP;
-			src_id = bpf_ntohl(src_id) >> 8;
-			ctx_store_meta(ctx, CB_SRC_LABEL, src_id);
+		if (dport != bpf_htons(TUNNEL_PORT))
+			goto skip_decap;
 
+		switch (TUNNEL_PROTOCOL) {
+		case TUNNEL_PROTOCOL_GENEVE:
+			shrink = ipv4_hdrlen(ip4) + sizeof(struct udphdr) +
+				 sizeof(struct genevehdr) + sizeof(struct ethhdr);
+			off = ((void *)ip4 - data) + ipv4_hdrlen(ip4) + sizeof(struct udphdr) +
+			      offsetof(struct genevehdr, vni);
+			break;
+		case TUNNEL_PROTOCOL_VXLAN:
 			shrink = ipv4_hdrlen(ip4) + sizeof(struct udphdr) +
 				 sizeof(struct vxlanhdr) + sizeof(struct ethhdr);
-			if (ctx_adjust_hroom(ctx, -shrink, BPF_ADJ_ROOM_MAC, ctx_adjust_hroom_flags()))
-				return CTX_ACT_DROP;
-			return ctx_redirect(ctx, ENCAP_IFINDEX, BPF_F_INGRESS);
+			off = ((void *)ip4 - data) + ipv4_hdrlen(ip4) + sizeof(struct udphdr) +
+			      offsetof(struct vxlanhdr, vx_vni);
+			break;
+		default:
+			/* If the tunnel type is neither VXLAN nor GENEVE, we have an issue. */
+			__throw_build_bug();
 		}
+
+		if (ctx_load_bytes(ctx, off, &src_id, sizeof(__u32)) < 0)
+			return CTX_ACT_DROP;
+		src_id = bpf_ntohl(src_id) >> 8;
+		ctx_store_meta(ctx, CB_SRC_LABEL, src_id);
+
+		if (ctx_adjust_hroom(ctx, -shrink, BPF_ADJ_ROOM_MAC, ctx_adjust_hroom_flags()))
+			return CTX_ACT_DROP;
+		return ctx_redirect(ctx, ENCAP_IFINDEX, BPF_F_INGRESS);
 	}
-skip_vxlan_decap:
+skip_decap:
 #endif /* ENABLE_HIGH_SCALE_IPCACHE */
 
 	/* Traffic from the host ns going through cilium_host device must

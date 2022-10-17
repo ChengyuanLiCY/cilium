@@ -137,8 +137,18 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
 		cDefinesMap[macroName] = fmt.Sprintf("%d", id)
 	}
 
-	cDefinesMap["TUNNEL_PROTOCOL"] = fmt.Sprintf("%d", tunnelProtocols[option.Config.Tunnel])
-	cDefinesMap["TUNNEL_PORT"] = fmt.Sprintf("%d", option.Config.TunnelPort)
+	tunnelProtocol := option.Config.Tunnel
+	tunnelPort := option.Config.TunnelPort
+	if option.Config.Tunnel == option.TunnelDisabled &&
+		option.Config.EnableHighScaleIPcache {
+		// If high-scale ipcache is enabled, we are using an ad-hoc GENEVE
+		// tunnel. This overwrite won't be necessary anymore once the
+		// tunnel flag is split into tunnel-protocol and enable-tunnel.
+		tunnelProtocol = option.TunnelGeneve
+		tunnelPort = defaults.TunnelPortGeneve
+	}
+	cDefinesMap["TUNNEL_PROTOCOL"] = fmt.Sprintf("%d", tunnelProtocols[tunnelProtocol])
+	cDefinesMap["TUNNEL_PORT"] = fmt.Sprintf("%d", tunnelPort)
 
 	cDefinesMap["HOST_ID"] = fmt.Sprintf("%d", identity.GetReservedID(labels.IDNameHost))
 	cDefinesMap["WORLD_ID"] = fmt.Sprintf("%d", identity.GetReservedID(labels.IDNameWorld))

@@ -349,11 +349,17 @@ func (l *Loader) Reinitialize(ctx context.Context, o datapath.BaseProgramOwner, 
 	}
 	args[initArgMode] = string(mode)
 
-	if option.Config.Tunnel == option.TunnelDisabled &&
-		(option.Config.EnableIPv4EgressGateway || option.Config.EnableHighScaleIPcache) {
-		// Enable tunnel mode to vxlan if egress gateway or the high-scale
-		// ipcache are configured.
-		args[initArgTunnelMode] = option.TunnelVXLAN
+	if option.Config.Tunnel == option.TunnelDisabled {
+		if option.Config.EnableIPv4EgressGateway {
+			// Enable tunnel mode to vxlan if the egress gateway is enabled.
+			args[initArgTunnelMode] = option.TunnelVXLAN
+		}
+		if option.Config.EnableHighScaleIPcache {
+			// Enable tunnel mode with GENEVE if the high-scale ipcache is
+			// enabled.
+			args[initArgTunnelMode] = option.TunnelGeneve
+			option.Config.TunnelPort = defaults.TunnelPortGeneve
+		}
 	}
 
 	args[initArgTunnelPort] = "<nil>"

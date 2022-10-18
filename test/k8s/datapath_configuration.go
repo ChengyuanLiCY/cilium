@@ -749,21 +749,35 @@ var _ = Describe("K8sDatapathConfig", func() {
 		})
 	})
 
-	It("High-scale IPcache", func() {
-		options := map[string]string{
-			"highScaleIPcache.enabled":    "true",
-			"tunnel":                      "disabled",
-			"bpf.monitorAggregation":      "none",
-			"devices":                     "",
-			"kubeProxyReplacement":        "disabled",
-			"ipv6.enabled":                "false",
-			"wellKnownIdentities.enabled": "true",
-		}
-		if !helpers.RunsOnGKE() {
-			options["autoDirectNodeRoutes"] = "true"
-		}
-		deploymentManager.DeployCilium(options, DeployCiliumOptionsAndDNS)
-		helpers.HoldEnvironment("Let's test")
+	SkipContextIf(helpers.DoesNotRunOnNetNextKernel, "High-scale IPcache", func() {
+		const hsIPcacheFile = "high-scale-ipcache.yaml"
+
+		AfterAll(func() {
+			hsIPcacheYAML := helpers.ManifestGet(kubectl.BasePath(), hsIPcacheFile)
+			_ = kubectl.Delete(hsIPcacheYAML)
+		})
+
+		It("Test ingress policy enforcement", func() {
+			options := map[string]string{
+				"highScaleIPcache.enabled":    "true",
+				"tunnel":                      "disabled",
+				"bpf.monitorAggregation":      "none",
+				"devices":                     "",
+				"kubeProxyReplacement":        "disabled",
+				"ipv6.enabled":                "false",
+				"wellKnownIdentities.enabled": "true",
+			}
+			if !helpers.RunsOnGKE() {
+				options["autoDirectNodeRoutes"] = "true"
+			}
+			deploymentManager.DeployCilium(options, DeployCiliumOptionsAndDNS)
+
+			hsIPcacheYAML := helpers.ManifestGet(kubectl.BasePath(), hsIPcacheFile)
+			kubectl.Create(hsIPcacheYAML).ExpectSuccess("Unable to create resource %q", hsIPcacheYAML)
+
+			err := kubectl.WaitforPods(helpers.DefaultNamespace, "-l type=client", helpers.HelperTimeout)
+			Expect(err).ToNot(HaveOccurred(), "Client pods not ready after timeout")
+		})
 	})
 
 	Context("Iptables", func() {

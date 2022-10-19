@@ -1205,13 +1205,15 @@ int cil_from_host(struct __ctx_buff *ctx)
 			return CTX_ACT_DROP;
 
 		if (dport == bpf_htons(TUNNEL_PORT)) {
-			off = ((void *)ip4 - data) + ipv4_hdrlen(ip4) + sizeof(struct udphdr) + offsetof(struct vxlanhdr, vx_vni);
+			off = ((void *)ip4 - data) + ipv4_hdrlen(ip4) + sizeof(struct udphdr) +
+			      offsetof(struct vxlanhdr, vx_vni);
 			if (ctx_load_bytes(ctx, off, &src_id, sizeof(__u32)) < 0)
 				return CTX_ACT_DROP;
 			src_id = bpf_ntohl(src_id) >> 8;
 			ctx_store_meta(ctx, CB_SRC_LABEL, src_id);
 
-			shrink = sizeof(struct iphdr) + sizeof(struct udphdr) + sizeof(struct vxlanhdr) + sizeof(struct ethhdr);
+			shrink = ipv4_hdrlen(ip4) + sizeof(struct udphdr) +
+				 sizeof(struct vxlanhdr) + sizeof(struct ethhdr);
 			if (ctx_adjust_hroom(ctx, -shrink, BPF_ADJ_ROOM_MAC, ctx_adjust_hroom_flags()))
 				return CTX_ACT_DROP;
 			return ctx_redirect(ctx, ENCAP_IFINDEX, BPF_F_INGRESS);

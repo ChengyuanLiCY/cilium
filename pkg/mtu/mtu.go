@@ -30,7 +30,7 @@ const (
 	//    Original Ethernet:  14B
 	//                        ---
 	//    Total extra bytes:  50B
-	TunnelOverhead = 50
+	TunnelOverhead = 260
 
 	// EncryptionIPsecOverhead is an approximation for bytes used for
 	// encryption. Depending on key size and encryption type the actual

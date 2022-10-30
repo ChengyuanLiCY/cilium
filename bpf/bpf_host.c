@@ -1145,6 +1145,7 @@ int cil_from_netdev(struct __ctx_buff *ctx)
 		struct iphdr *ip4;
 		__u32 off, src_id;
 		int shrink;
+		struct genevehdr ghdr;
 
 		if (!validate_ethertype(ctx, &proto)) {
 			return CTX_ACT_DROP;
@@ -1164,10 +1165,19 @@ int cil_from_netdev(struct __ctx_buff *ctx)
 		if (dport != bpf_htons(TUNNEL_PORT))
 			goto skip_decap;
 
+
 		switch (TUNNEL_PROTOCOL) {
 		case TUNNEL_PROTOCOL_GENEVE:
+			off = ((void *)ip4 - data) + ipv4_hdrlen(ip4) + sizeof(struct udphdr);
+			if (ctx_load_bytes(ctx, off, &ghdr, sizeof(struct genevehdr)) < 0)
+				return CTX_ACT_DROP;
+
+			printk("genevehdr, proto_type: %x, opt_len: %d\n", ghdr.proto_type, ghdr.opt_len);
+			if (ghdr.proto_type != bpf_htons(ETH_P_TEB))
+				goto skip_decap;
+
 			shrink = ipv4_hdrlen(ip4) + sizeof(struct udphdr) +
-				 sizeof(struct genevehdr) + sizeof(struct ethhdr);
+				 sizeof(struct genevehdr) + ghdr.opt_len * 4 + sizeof(struct ethhdr);
 			off = ((void *)ip4 - data) + ipv4_hdrlen(ip4) + sizeof(struct udphdr) +
 			      offsetof(struct genevehdr, vni);
 			break;

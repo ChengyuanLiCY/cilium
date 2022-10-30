@@ -3,6 +3,11 @@
 #ifndef _LINUX_GENEVE_H
 #define _LINUX_GENEVE_H
 
+#include <linux/byteorder.h>
+
+#define GENEVE_UDP_PORT         6081
+#define ETH_P_TEB       0x6558          /* Trans Ether Bridging         */
+
 /* Geneve Header:
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |Ver|  Opt Len  |O|C|    Rsvd.  |          Protocol Type        |

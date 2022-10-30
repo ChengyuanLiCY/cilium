@@ -1138,6 +1138,62 @@ int cil_from_netdev(struct __ctx_buff *ctx)
 {
 	__u32 __maybe_unused vlan_id;
 
+#ifdef ENABLE_HIGH_SCALE_IPCACHE
+	{
+		void *data, *data_end;
+		__u16 dport, proto;
+		struct iphdr *ip4;
+		__u32 off, src_id;
+		int shrink;
+
+		if (!validate_ethertype(ctx, &proto)) {
+			return CTX_ACT_DROP;
+		}
+		if (proto != bpf_htons(ETH_P_IP))
+			goto skip_decap;
+
+		if (!revalidate_data(ctx, &data, &data_end, &ip4))
+			return CTX_ACT_DROP;
+		if (ip4->protocol != IPPROTO_UDP)
+			goto skip_decap;
+
+		off = ((void *)ip4 - data) + ipv4_hdrlen(ip4) + offsetof(struct udphdr, dest);
+		if (ctx_load_bytes(ctx, off, &dport, sizeof(__u16)) < 0)
+			return CTX_ACT_DROP;
+
+		if (dport != bpf_htons(TUNNEL_PORT))
+			goto skip_decap;
+
+		switch (TUNNEL_PROTOCOL) {
+		case TUNNEL_PROTOCOL_GENEVE:
+			shrink = ipv4_hdrlen(ip4) + sizeof(struct udphdr) +
+				 sizeof(struct genevehdr) + sizeof(struct ethhdr);
+			off = ((void *)ip4 - data) + ipv4_hdrlen(ip4) + sizeof(struct udphdr) +
+			      offsetof(struct genevehdr, vni);
+			break;
+		case TUNNEL_PROTOCOL_VXLAN:
+			shrink = ipv4_hdrlen(ip4) + sizeof(struct udphdr) +
+				 sizeof(struct vxlanhdr) + sizeof(struct ethhdr);
+			off = ((void *)ip4 - data) + ipv4_hdrlen(ip4) + sizeof(struct udphdr) +
+			      offsetof(struct vxlanhdr, vx_vni);
+			break;
+		default:
+			/* If the tunnel type is neither VXLAN nor GENEVE, we have an issue. */
+			__throw_build_bug();
+		}
+
+		if (ctx_load_bytes(ctx, off, &src_id, sizeof(__u32)) < 0)
+			return CTX_ACT_DROP;
+		src_id = bpf_ntohl(src_id) >> 8;
+		ctx_store_meta(ctx, CB_SRC_LABEL, src_id);
+
+		if (ctx_adjust_hroom(ctx, -shrink, BPF_ADJ_ROOM_MAC, ctx_adjust_hroom_flags()))
+			return CTX_ACT_DROP;
+		return ctx_redirect(ctx, ENCAP_IFINDEX, BPF_F_INGRESS);
+	}
+skip_decap:
+#endif /* ENABLE_HIGH_SCALE_IPCACHE */
+
 #ifdef ENABLE_NODEPORT_ACCELERATION
 #ifdef HAVE_ENCAP
 	__u32 flags = ctx_get_xfer(ctx, XFER_FLAGS);

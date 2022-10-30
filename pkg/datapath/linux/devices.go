@@ -94,7 +94,7 @@ func (dm *DeviceManager) Detect() ([]string, error) {
 		l3DevOK = supportL3Dev()
 	}
 
-	if len(option.Config.GetDevices()) == 0 && dm.AreDevicesRequired() {
+	if len(option.Config.GetDevices()) == 0 && (dm.AreDevicesRequired() || option.Config.EnableHighScaleIPcache) {
 		// Detect the devices from the system routing table by finding the devices
 		// which have global unicast routes.
 		family := netlink.FAMILY_ALL

@@ -30,7 +30,20 @@ const (
 	//    Original Ethernet:  14B
 	//                        ---
 	//    Total extra bytes:  50B
-	TunnelOverhead = 260
+	//
+	// Geneve protocol, https://datatracker.ietf.org/doc/rfc8926/
+	// The length of the option fields, expressed in
+	// 4-byte multiples, not including the 8-byte fixed tunnel header.
+	// This results in a minimum total Geneve header size of 8 bytes and
+	// a maximum of 260 bytes.
+	//    Outer IPv4 header:     20B
+	//    Outer UDP header:       8B
+	//    Outer GENEVE header:  260B
+	//    Original Ethernet:     14B
+	//                          ---
+	//    Total extra bytes:    302B
+
+	TunnelOverhead = 302
 
 	// EncryptionIPsecOverhead is an approximation for bytes used for
 	// encryption. Depending on key size and encryption type the actual

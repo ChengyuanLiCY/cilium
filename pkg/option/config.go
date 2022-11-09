@@ -3923,6 +3923,7 @@ func EndpointStatusValuesMap() (values map[string]struct{}) {
 func MightAutoDetectDevices() bool {
 	devices := Config.GetDevices()
 	return (Config.EnableHostFirewall && len(devices) == 0) ||
+		(Config.EnableHighScaleIPcache && len(devices) == 0) ||
 		(Config.KubeProxyReplacement != KubeProxyReplacementDisabled &&
 			(len(devices) == 0 || Config.DirectRoutingDevice == ""))
 }

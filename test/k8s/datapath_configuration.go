@@ -762,7 +762,6 @@ var _ = Describe("K8sDatapathConfig", func() {
 				"highScaleIPcache.enabled":    "true",
 				"tunnel":                      "disabled",
 				"bpf.monitorAggregation":      "none",
-				"devices":                     "",
 				"kubeProxyReplacement":        "disabled",
 				"ipv6.enabled":                "false",
 				"wellKnownIdentities.enabled": "true",

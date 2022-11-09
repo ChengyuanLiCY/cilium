@@ -1172,16 +1172,6 @@ int cil_from_netdev(struct __ctx_buff *ctx)
 		}
 	}
 
-	return handle_netdev(ctx, false);
-}
-
-/*
- * from-host is attached as a tc egress filter to the node's 'cilium_host'
- * interface if present.
- */
-__section("from-host")
-int cil_from_host(struct __ctx_buff *ctx)
-{
 #ifdef ENABLE_HIGH_SCALE_IPCACHE
 	{
 		void *data, *data_end;
@@ -1238,6 +1228,16 @@ int cil_from_host(struct __ctx_buff *ctx)
 skip_decap:
 #endif /* ENABLE_HIGH_SCALE_IPCACHE */
 
+	return handle_netdev(ctx, false);
+}
+
+/*
+ * from-host is attached as a tc egress filter to the node's 'cilium_host'
+ * interface if present.
+ */
+__section("from-host")
+int cil_from_host(struct __ctx_buff *ctx)
+{
 	/* Traffic from the host ns going through cilium_host device must
 	 * not be subject to EDT rate-limiting.
 	 */

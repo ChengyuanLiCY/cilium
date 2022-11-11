@@ -479,21 +479,21 @@ func (d *Daemon) createEndpoint(ctx context.Context, owner regeneration.Owner, e
 	// manager creates the endpoint queue the operation will fail.
 	if ep.K8sNamespaceAndPodNameIsSet() && k8s.IsEnabled() && k8sLabelsConfigured {
 		ep.UpdateVisibilityPolicy(func(ns, podName string) (proxyVisibility string, err error) {
-			p, err := d.k8sWatcher.GetCachedPod(ns, podName)
+			_, p, err := d.endpointMetadataFetcher.Fetch(ns, podName)
 			if err != nil {
 				return "", err
 			}
 			return p.Annotations[annotation.ProxyVisibility], nil
 		})
 		ep.UpdateBandwidthPolicy(func(ns, podName string) (bandwidthEgress string, err error) {
-			p, err := d.k8sWatcher.GetCachedPod(ns, podName)
+			_, p, err := d.endpointMetadataFetcher.Fetch(ns, podName)
 			if err != nil {
 				return "", err
 			}
 			return p.Annotations[bandwidth.EgressBandwidth], nil
 		})
 		ep.UpdateNoTrackRules(func(ns, podName string) (noTrackPort string, err error) {
-			p, err := d.k8sWatcher.GetCachedPod(ns, podName)
+			_, p, err := d.endpointMetadataFetcher.Fetch(ns, podName)
 			if err != nil {
 				return "", err
 			}

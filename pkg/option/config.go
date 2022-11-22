@@ -1170,6 +1170,17 @@ const (
 	// running and able to schedule endpoints.
 	WriteCNIConfigurationWhenReady = "write-cni-conf-when-ready"
 
+	// DefaultCNIConfiguration is an original default CNI configuration file. If
+	// WriteCNIConfigurationChainedMode is true, its content will be appended
+	// with ReadCNIConfiguration and be written into WriteCNIConfigurationWhenReady
+	DefaultCNIConfiguration = "default-cni-conf"
+
+	// WriteCNIConfigurationChainedMode means writing the CNI configuration
+	// of ReadCNIConfiguration into the file WriteCNIConfigurationWhenReady with the configurations
+	// of DefaultCNIConfiguration in a chained mode.
+	// If false, it will write the CNI configuration of ReadCNIConfiguration into a single file
+	WriteCNIConfigurationChainedMode = "write-cni-conf-chained-mode"
+
 	// EnableCiliumEndpointSlice enables the cilium endpoint slicing feature.
 	EnableCiliumEndpointSlice = "enable-cilium-endpoint-slice"
 )
@@ -1819,6 +1830,16 @@ type DaemonConfig struct {
 	// allows to keep a Kubernetes node NotReady until Cilium is up and
 	// running and able to schedule endpoints.
 	WriteCNIConfigurationWhenReady string
+
+	// DefaultCNIConfiguration is an original CNI configuration file. If
+	// WriteCNIConfigurationChainedMode is true, its content will be appened
+	// with ReadCNIConfiguration and be written into WriteCNIConfigurationWhenReady
+	DefaultCNIConfiguration string
+
+	// WriteCNIConfigurationChainedMode means writing the CNI configuration
+	// of ReadCNIConfiguration into a chained cni configuration file. If false, it will write
+	// the CNI configuration into a single file
+	WriteCNIConfigurationChainedMode bool
 
 	// EnableNodePort enables k8s NodePort service implementation in BPF
 	EnableNodePort bool
@@ -2899,6 +2920,8 @@ func (c *DaemonConfig) Populate(vp *viper.Viper) {
 	c.TracePayloadlen = vp.GetInt(TracePayloadlen)
 	c.Version = vp.GetString(Version)
 	c.WriteCNIConfigurationWhenReady = vp.GetString(WriteCNIConfigurationWhenReady)
+	c.DefaultCNIConfiguration = vp.GetString(DefaultCNIConfiguration)
+	c.WriteCNIConfigurationChainedMode = vp.GetBool(WriteCNIConfigurationChainedMode)
 	c.PolicyTriggerInterval = vp.GetDuration(PolicyTriggerInterval)
 	c.CTMapEntriesTimeoutTCP = vp.GetDuration(CTMapEntriesTimeoutTCPName)
 	c.CTMapEntriesTimeoutAny = vp.GetDuration(CTMapEntriesTimeoutAnyName)

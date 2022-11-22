@@ -876,6 +876,12 @@ func initializeFlags() {
 	flags.String(option.WriteCNIConfigurationWhenReady, "", fmt.Sprintf("Write the CNI configuration as specified via --%s to path when agent is ready", option.ReadCNIConfiguration))
 	option.BindEnv(Vp, option.WriteCNIConfigurationWhenReady)
 
+	flags.String(option.DefaultCNIConfiguration, "", "location of the default CNI configuration file")
+	option.BindEnv(Vp, option.DefaultCNIConfiguration)
+
+	flags.Bool(option.WriteCNIConfigurationChainedMode, false, fmt.Sprintf("Allow writing the CNI configuration from %s with the default CNI configuration using chained mode into %s", option.ReadCNIConfiguration, option.WriteCNIConfigurationWhenReady))
+	option.BindEnv(Vp, option.WriteCNIConfigurationChainedMode)
+
 	flags.Duration(option.PolicyTriggerInterval, defaults.PolicyTriggerInterval, "Time between triggers of policy updates (regenerations for all endpoints)")
 	flags.MarkHidden(option.PolicyTriggerInterval)
 	option.BindEnv(Vp, option.PolicyTriggerInterval)
@@ -1871,17 +1877,71 @@ func runDaemon(ctx context.Context, cleaner *daemonCleanup, shutdowner hive.Shut
 		Info("Daemon initialization completed")
 
 	if option.Config.WriteCNIConfigurationWhenReady != "" {
-		input, err := os.ReadFile(option.Config.ReadCNIConfiguration)
+		originalConfFile := ""
+		originalConfContents := make([]byte, 0)
+		readCniConf, err := os.ReadFile(option.Config.ReadCNIConfiguration)
 		if err != nil {
 			log.Fatalf("unable to read cni configuration file: %s", err)
 		}
+		if option.Config.WriteCNIConfigurationChainedMode {
+			if !strings.HasSuffix(option.Config.WriteCNIConfigurationWhenReady, ".conflist") {
+				log.Fatalf("the cni configuration file %s should be suffixed with .conflist when %s is true", option.Config.WriteCNIConfigurationWhenReady, option.WriteCNIConfigurationChainedMode)
+			}
+			readCniConfContents, err := getCNINetworkListFromFile(option.Config.ReadCNIConfiguration)
+			if err != nil {
+				log.Fatalf("failed to read the cni configuration from %s: %s", option.Config.ReadCNIConfiguration, err.Error())
+			}
 
-		if err = os.WriteFile(option.Config.WriteCNIConfigurationWhenReady, input, 0644); err != nil {
+			log.Infof("append the configurations from %s into the file %s", option.Config.ReadCNIConfiguration, option.Config.WriteCNIConfigurationWhenReady)
+			if option.Config.DefaultCNIConfiguration != "" && exists(option.Config.DefaultCNIConfiguration) {
+				originalConfFile = option.Config.DefaultCNIConfiguration
+				originalConfContents, err = getCNINetworkListFromFile(option.Config.DefaultCNIConfiguration)
+				if err != nil {
+					log.Fatalf("unable to read cni configurations from the file %s", option.Config.DefaultCNIConfiguration)
+				}
+			} else if exists(option.Config.WriteCNIConfigurationWhenReady) {
+				originalConfFile = option.Config.WriteCNIConfigurationWhenReady
+				originalConfContents, err = getCNINetworkListFromFile(option.Config.WriteCNIConfigurationWhenReady)
+				if err != nil {
+					log.Fatalf("unable to read the cni configurations from %s: %s", option.Config.WriteCNIConfigurationWhenReady, err.Error())
+				}
+			} else if option.Config.DefaultCNIConfiguration == "" {
+				cniPath := filepath.Dir(option.Config.WriteCNIConfigurationWhenReady)
+				log.Infof("the default CNI configuration file is not specified, read the default CNI configuration from %s", cniPath)
+				originalConfFile, originalConfContents, err = getDefaultCNINetworkList(cniPath)
+				if err != nil {
+					log.Warnf("unable to read the original cni configurations files under %s: %s. Will write the contents of %s directly into %s", cniPath, err.Error(), option.Config.ReadCNIConfiguration, option.Config.WriteCNIConfigurationWhenReady)
+				}
+			}
+
+			if originalConfContents != nil && len(originalConfContents) != 0 {
+				readCniConf, err = insertConfList(option.Config.CNIChainingMode, originalConfContents, readCniConfContents)
+				if err != nil {
+					log.Fatalf("unable to combine cni configuraion %s with %s: %s", option.Config.ReadCNIConfiguration, originalConfFile, err.Error())
+				}
+			} else {
+				readCniConf, err = marshalCNIConfigFromBytes(readCniConfContents)
+				if err != nil {
+					log.Fatalf("unable to mashal %s to chained CNI configuration format: %s", option.Config.ReadCNIConfiguration, err.Error())
+				}
+			}
+		}
+
+		// Write the final CNI Configurations into WriteCNIConfigurationWhenReady
+		if err = atomicWrite(option.Config.WriteCNIConfigurationWhenReady, readCniConf, 0644); err != nil {
 			log.Fatalf("unable to write CNI configuration file to %s: %s",
 				option.Config.WriteCNIConfigurationWhenReady,
 				err)
 		} else {
 			log.Infof("Wrote CNI configuration file to %s", option.Config.WriteCNIConfigurationWhenReady)
+		}
+
+		// Remove the original CNI Configuration file
+		if originalConfFile != "" && originalConfFile != option.Config.WriteCNIConfigurationWhenReady {
+			err = os.Remove(originalConfFile)
+			if err != nil {
+				log.Fatalf("unable to delete the original cni configurations file %s: %s", originalConfFile, err.Error())
+			}
 		}
 	}
 

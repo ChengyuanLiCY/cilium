@@ -120,18 +120,20 @@ func (f *GenericVethChainer) Add(ctx context.Context, pluginCtx chainingapi.Plug
 			return fmt.Errorf("no link found inside container")
 		}
 
-		routes, err = netlink.RouteList(nil, netlink.FAMILY_V4)
-		if err != nil {
-			err = fmt.Errorf("unable to list the routes: %s", err.Error())
-			return err
-		}
-		for _, rt := range routes {
-			rt.MTU = int(conf.RouteMTU)
-			pluginCtx.Logger.Debugf("replace the route %s with mtu %d", rt.String(), rt.MTU)
-			err = netlink.RouteReplace(&rt)
+		if pluginCtx.NetConf.ChainingMode.ConfigRouteMTU {
+			routes, err = netlink.RouteList(nil, netlink.FAMILY_V4)
 			if err != nil {
-				err = fmt.Errorf("unable to replace the mtu %d for the route %s: %s", rt.MTU, rt.String(), err.Error())
+				err = fmt.Errorf("unable to list the routes: %s", err.Error())
 				return err
+			}
+			for _, rt := range routes {
+				rt.MTU = int(conf.RouteMTU)
+				pluginCtx.Logger.Debugf("replace the route %s with mtu %d", rt.String(), rt.MTU)
+				err = netlink.RouteReplace(&rt)
+				if err != nil {
+					err = fmt.Errorf("unable to replace the mtu %d for the route %s: %s", rt.MTU, rt.String(), err.Error())
+					return err
+				}
 			}
 		}
 

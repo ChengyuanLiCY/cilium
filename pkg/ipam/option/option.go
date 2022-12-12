@@ -33,6 +33,9 @@ const (
 	// In this mode, Cilium CNI invokes another CNI binary (the delegated plugin) for IPAM.
 	// See https://www.cni.dev/docs/spec/#section-4-plugin-delegation
 	IPAMDelegatedPlugin = "delegated-plugin"
+
+	// IPAMTessnet is the value to select tessnet as the IPAM
+	IPAMTessnet = "tessnet"
 )
 
 const (

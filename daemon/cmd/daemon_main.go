@@ -1376,9 +1376,6 @@ func initEnv() {
 		if option.Config.TunnelingEnabled() {
 			log.Fatal("The high-scale IPcache mode requires native routing.")
 		}
-		if option.Config.GetIPv4NativeRoutingCIDR() == nil {
-			log.Fatal("The high-scale IPcache mode requires the native routing CIDR to be set.")
-		}
 		if option.Config.EnableIPv4EgressGateway {
 			log.Fatal("The egress gateway is not supported in high scale IPcache mode.")
 		}

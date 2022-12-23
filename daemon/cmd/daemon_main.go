@@ -1060,6 +1060,9 @@ func initializeFlags() {
 	flags.Bool(option.EnableBGPControlPlane, false, "Enable the BGP control plane.")
 	option.BindEnv(Vp, option.EnableBGPControlPlane)
 
+	flags.Bool(option.EnableK8sNetworkPolicy, true, "Enable the K8s NetworkPolicy")
+	option.BindEnv(Vp, option.EnableK8sNetworkPolicy)
+
 	if err := Vp.BindPFlags(flags); err != nil {
 		log.Fatalf("BindPFlags failed: %s", err)
 	}

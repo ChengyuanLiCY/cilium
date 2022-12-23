@@ -1099,6 +1099,8 @@ const (
 	// EnableRuntimeDeviceDetection is the name of the option to enable detection
 	// of new and removed datapath devices during the agent runtime.
 	EnableRuntimeDeviceDetection = "enable-runtime-device-detection"
+
+	EnableK8sNetworkPolicy = "enable-k8s-networkpolicy"
 )
 
 // Default string arguments
@@ -2256,6 +2258,9 @@ type DaemonConfig struct {
 
 	// EnvoySecretNamespace for TLS secrets. Used by CiliumEnvoyConfig via SDS.
 	EnvoySecretNamespace string
+
+	// Enable Cilium Agent to watch k8s NetworkPolicy
+	EnableK8sNetworkPolicy bool
 }
 
 var (
@@ -2302,9 +2307,10 @@ var (
 		K8sEnableLeasesFallbackDiscovery: defaults.K8sEnableLeasesFallbackDiscovery,
 		APIRateLimit:                     make(map[string]string),
 
-		ExternalClusterIP:     defaults.ExternalClusterIP,
-		EnableVTEP:            defaults.EnableVTEP,
-		EnableBGPControlPlane: defaults.EnableBGPControlPlane,
+		ExternalClusterIP:      defaults.ExternalClusterIP,
+		EnableVTEP:             defaults.EnableVTEP,
+		EnableBGPControlPlane:  defaults.EnableBGPControlPlane,
+		EnableK8sNetworkPolicy: defaults.EnableK8sNetworkPolicy,
 	}
 )
 
@@ -2536,6 +2542,11 @@ func (c *DaemonConfig) AgentNotReadyNodeTaintValue() string {
 	} else {
 		return defaults.AgentNotReadyNodeTaint
 	}
+}
+
+// K8sNetworkPolicyEnabled returns false if cilium needn't watch k8s NetworkPolicy
+func (c *DaemonConfig) K8sNetworkPolicyEnabled() bool {
+	return c.EnableK8sNetworkPolicy
 }
 
 // K8sIngressControllerEnabled returns true if ingress controller feature is enabled in Cilium
@@ -3252,6 +3263,9 @@ func (c *DaemonConfig) Populate(vp *viper.Viper) {
 
 	// Envoy secrets namespace to watch
 	c.EnvoySecretNamespace = vp.GetString(IngressSecretsNamespace)
+
+	// To watch K8s NetworkPolicy
+	c.EnableK8sNetworkPolicy = vp.GetBool(EnableK8sNetworkPolicy)
 }
 
 func (c *DaemonConfig) additionalMetrics() []string {

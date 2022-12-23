@@ -72,6 +72,12 @@ type IngressConfiguration interface {
 	K8sIngressControllerEnabled() bool
 }
 
+// PolicyConfiguration is the required configuration for K8s NetworkPolicy
+type PolicyConfiguration interface {
+       // K8sNetworkPolicyEnabled returns true if cilium agent need watch K8s NetworkPolicy
+       K8sNetworkPolicyEnabled() bool
+}
+
 // GetServiceListOptionsModifier returns the options modifier for service object list.
 // This methods returns a ListOptions modifier which adds a label selector to only
 // select services that are in context of Cilium.

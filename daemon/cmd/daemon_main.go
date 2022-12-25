@@ -1063,6 +1063,9 @@ func initializeFlags() {
 	flags.Bool(option.EnableK8sNetworkPolicy, true, "Enable the K8s NetworkPolicy")
 	option.BindEnv(Vp, option.EnableK8sNetworkPolicy)
 
+	flags.Bool(option.EnableNoEncapsulation, true, "No packets encapsulation in high-scale ipcache mode")
+	option.BindEnv(Vp, option.EnableNoEncapsulation)
+
 	if err := Vp.BindPFlags(flags); err != nil {
 		log.Fatalf("BindPFlags failed: %s", err)
 	}

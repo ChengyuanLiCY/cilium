@@ -1101,6 +1101,9 @@ const (
 	EnableRuntimeDeviceDetection = "enable-runtime-device-detection"
 
 	EnableK8sNetworkPolicy = "enable-k8s-networkpolicy"
+
+	// No packet encapsulation in high-scale ipcache mode
+	EnableNoEncapsulation = "enable-no-encapsulation"
 )
 
 // Default string arguments
@@ -2261,6 +2264,9 @@ type DaemonConfig struct {
 
 	// Enable Cilium Agent to watch k8s NetworkPolicy
 	EnableK8sNetworkPolicy bool
+
+	// No packets encapsulation in high-scale ipcache mode
+	EnableNoEncapsulation bool
 }
 
 var (
@@ -2311,6 +2317,7 @@ var (
 		EnableVTEP:             defaults.EnableVTEP,
 		EnableBGPControlPlane:  defaults.EnableBGPControlPlane,
 		EnableK8sNetworkPolicy: defaults.EnableK8sNetworkPolicy,
+		EnableNoEncapsulation:  defaults.EnableNoEncapsulation,
 	}
 )
 
@@ -3266,6 +3273,9 @@ func (c *DaemonConfig) Populate(vp *viper.Viper) {
 
 	// To watch K8s NetworkPolicy
 	c.EnableK8sNetworkPolicy = vp.GetBool(EnableK8sNetworkPolicy)
+
+	//To disable packets encapsulation in high-scale ipcache mode
+	c.EnableNoEncapsulation = vp.GetBool(EnableNoEncapsulation)
 }
 
 func (c *DaemonConfig) additionalMetrics() []string {

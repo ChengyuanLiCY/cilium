@@ -514,4 +514,7 @@ const (
 
 	// EnableK8sNetworkPolicy default value is true, cilium agent need to watch k8s NetworkPolicy by default.
 	EnableK8sNetworkPolicy = true
+
+	// No packets encapsulation in high-scale ipcache mode
+	EnableNoEncapsulation = true
 )

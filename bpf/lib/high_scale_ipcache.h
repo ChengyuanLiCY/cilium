@@ -32,11 +32,13 @@ world_cidrs_lookup4(__u32 addr)
 static __always_inline bool
 needs_encapsulation(__u32 addr)
 {
+# ifdef ENABLE_NO_ENCAPSULATION
 	/*
 	 * Return false always for the transparent mode,
 	 * i.e. no packets encapsulation for any egress packets.
 	 */
 	return false;
+# endif
 
 # ifndef ENABLE_ROUTING
 	/* If endpoint routes are enabled, we need to check if the destination

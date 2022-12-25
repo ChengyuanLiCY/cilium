@@ -607,6 +607,10 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
 			fmt.Sprintf("%#x", byteorder.NetIPv4ToHost32(cidr.IP))
 		ones, _ := cidr.Mask.Size()
 		cDefinesMap["IPV4_NATIVE_ROUTING_CIDR_LEN"] = fmt.Sprintf("%d", ones)
+
+		if option.Config.EnableNoEncapsulation {
+			cDefinesMap["ENABLE_NO_ENCAPSULATION"] = "1"
+		}
 	}
 
 	if option.Config.EnableCustomCalls {

@@ -606,6 +606,9 @@ k8sNetworkpolicy:
   # -- Enable watch K8s Networkpolicy
   enabled: true
 
+noEncapsulation:
+  # -- No Encapsulation for egress packets in high-scale ipcache mode
+  enabled: true
 eni:
   # -- Enable Elastic Network Interface (ENI) integration.
   enabled: false

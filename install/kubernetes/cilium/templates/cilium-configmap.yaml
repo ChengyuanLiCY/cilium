@@ -690,6 +690,9 @@ data:
 {{- if and .Values.k8sNetworkpolicy .Values.k8sNetworkpolicy.enabled }}
   enable-k8s-networkpolicy: {{ .Values.k8sNetworkpolicy.enabled | quote }}
 {{- end }}
+{{- if and .Values.noEncapsulation .Values.noEncapsulation.enabled }}
+  enable-no-encapsulation: {{ .Values.noEncapsulation.enabled | quote }}
+{{- end }}
 {{- if .Values.cni.configMap }}
   read-cni-conf: {{ .Values.cni.confFileMountPath }}/{{ .Values.cni.configMapKey }}
   write-cni-conf-when-ready: {{ .Values.cni.hostConfDirMountPath }}/05-cilium.conflist

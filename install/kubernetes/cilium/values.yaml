@@ -602,6 +602,10 @@ endpointRoutes:
   # the cilium_host interface.
   enabled: false
 
+k8sNetworkpolicy:
+  # -- Enable watch K8s Networkpolicy
+  enabled: true
+
 eni:
   # -- Enable Elastic Network Interface (ENI) integration.
   enabled: false

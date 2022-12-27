@@ -526,6 +526,9 @@ const (
 
 	// Enable BGP control plane features.
 	EnableBGPControlPlane = false
+
+	// EnableK8sNetworkPolicy default value is true, cilium agent need to support K8s NetworkPolicy by default.
+	EnableK8sNetworkPolicy = true
 )
 
 var (

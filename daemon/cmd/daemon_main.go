@@ -1086,6 +1086,9 @@ func initializeFlags() {
 	flags.MarkHidden(option.EnableStaleCiliumEndpointCleanup)
 	option.BindEnv(Vp, option.EnableStaleCiliumEndpointCleanup)
 
+	flags.Bool(option.EnableK8sNetworkPolicy, defaults.EnableK8sNetworkPolicy, "Enable the K8s NetworkPolicy")
+	option.BindEnv(Vp, option.EnableK8sNetworkPolicy)
+
 	if err := Vp.BindPFlags(flags); err != nil {
 		log.Fatalf("BindPFlags failed: %s", err)
 	}

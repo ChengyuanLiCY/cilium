@@ -872,6 +872,7 @@ runPath
 runtime
 runtimes
 sEventHandover
+sNetworkPolicy
 sNode
 sNodes
 sService

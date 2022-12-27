@@ -1122,6 +1122,9 @@ const (
 	// EnableStaleCiliumEndpointCleanup sets whether Cilium should perform cleanup of
 	// stale CiliumEndpoints during init.
 	EnableStaleCiliumEndpointCleanup = "enable-stale-cilium-endpoint-cleanup"
+
+	// EnableK8sNetworkPolicy defines if cilium agent need to support K8s NetworkPolicy
+	EnableK8sNetworkPolicy = "enable-k8s-networkpolicy"
 )
 
 // Default string arguments
@@ -2299,6 +2302,9 @@ type DaemonConfig struct {
 	// This will attempt to remove local CiliumEndpoints that are not managed by Cilium
 	// following Endpoint restoration.
 	EnableStaleCiliumEndpointCleanup bool
+
+	// Enable Cilium Agent to support K8s NetworkPolicy
+	EnableK8sNetworkPolicy bool
 }
 
 var (
@@ -2345,9 +2351,10 @@ var (
 		K8sEnableLeasesFallbackDiscovery: defaults.K8sEnableLeasesFallbackDiscovery,
 		APIRateLimit:                     make(map[string]string),
 
-		ExternalClusterIP:     defaults.ExternalClusterIP,
-		EnableVTEP:            defaults.EnableVTEP,
-		EnableBGPControlPlane: defaults.EnableBGPControlPlane,
+		ExternalClusterIP:      defaults.ExternalClusterIP,
+		EnableVTEP:             defaults.EnableVTEP,
+		EnableBGPControlPlane:  defaults.EnableBGPControlPlane,
+		EnableK8sNetworkPolicy: defaults.EnableK8sNetworkPolicy,
 	}
 )
 
@@ -2585,6 +2592,11 @@ func (c *DaemonConfig) AgentNotReadyNodeTaintValue() string {
 	} else {
 		return defaults.AgentNotReadyNodeTaint
 	}
+}
+
+// K8sNetworkPolicyEnabled returns false if cilium needn't support K8s NetworkPolicy
+func (c *DaemonConfig) K8sNetworkPolicyEnabled() bool {
+	return c.EnableK8sNetworkPolicy
 }
 
 // K8sIngressControllerEnabled returns true if ingress controller feature is enabled in Cilium
@@ -3346,6 +3358,9 @@ func (c *DaemonConfig) Populate(vp *viper.Viper) {
 		}
 	}
 	c.EnvoySecretNamespaces = nsList
+
+	// To support K8s NetworkPolicy
+	c.EnableK8sNetworkPolicy = vp.GetBool(EnableK8sNetworkPolicy)
 }
 
 func (c *DaemonConfig) additionalMetrics() []string {
